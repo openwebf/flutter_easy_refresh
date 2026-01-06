@@ -2,6 +2,10 @@
 - feat: Added EasyRefresh.isNested parameter to determine whether to handle NestedScrollView. In versions 3.4.0 and earlier, no setting is required.
 - fix: Adjust the Flutter version, Flutter >=3.10.0.
 
+## 3.4.1
+
+- fix: Fix footer staying visible after finishLoad
+
 ## 3.4.0
 - breaking: Flutter >=3.7.0, dart >=2.19.0. Remove some unnecessary compatibility, please update the Flutter version in time, or use the previous version.
 - fix: Scroll bar adaptation for unknown platforms [#825](https://github.com/xuelongqy/flutter_easy_refresh/issues/825).

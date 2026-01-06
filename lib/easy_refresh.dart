@@ -1,4 +1,4 @@
-library easy_refresh;
+library webf_easy_refresh;
 
 import 'dart:math' as math;
 import 'dart:async';
@@ -11,7 +11,7 @@ import 'package:flutter/physics.dart' as physics;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:easy_refresh/src/painter/paths_painter.dart';
+import 'package:webf_easy_refresh/src/painter/paths_painter.dart';
 
 part 'src/easy_refresh.dart';
 part 'src/physics/scroll_physics.dart';

@@ -1,5 +1,6 @@
 ## 3.4.2
 
+
 - feat: Added EasyRefresh.isNested parameter to determine whether to handle NestedScrollView. In versions 3.4.0 and earlier, no setting is required.
 - fix: Adjust the Flutter version, Flutter >=3.10.0.
 - feat: Add opt-in internal debug logging for indicator state/visibility tracking (EasyRefresh.debugLogEnabled / EasyRefresh.debugLogger).

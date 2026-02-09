@@ -49,3 +49,18 @@ part 'src/styles/cupertino/cupertino_indicator.dart';
 part 'src/styles/cupertino/cupertino_activity_indicator.dart';
 part 'src/styles/cupertino/header/cupertino_header.dart';
 part 'src/styles/cupertino/footer/cupertino_footer.dart';
+
+/// Debug log callback for EasyRefresh internal events.
+typedef EasyRefreshLogCallback = void Function(String message);
+
+void _erDebugLog(String message) {
+  if (!kDebugMode || !EasyRefresh.debugLogEnabled) {
+    return;
+  }
+  final logger = EasyRefresh.debugLogger;
+  if (logger != null) {
+    logger(message);
+  } else {
+    debugPrint(message);
+  }
+}

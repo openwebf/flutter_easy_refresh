@@ -44,6 +44,16 @@ class _InheritedEasyRefresh extends InheritedWidget {
 
 /// A flutter widget that provides pull-down refresh and pull-up load.
 class EasyRefresh extends StatefulWidget {
+  /// Enable internal debug logging (debug mode only).
+  ///
+  /// Logs are routed to [debugLogger] when provided, otherwise [debugPrint].
+  static bool debugLogEnabled = false;
+
+  /// Internal debug log handler.
+  static EasyRefreshLogCallback? debugLogger;
+
+  static int _debugNextId = 0;
+
   /// Try to avoid including multiple ScrollViews.
   /// Or set separate ScrollPhysics for other ScrollView.
   /// Otherwise use [EasyRefresh.builder].
@@ -264,6 +274,27 @@ class EasyRefresh extends StatefulWidget {
 /// EasyRefresh widget state.
 class _EasyRefreshState extends State<EasyRefresh>
     with TickerProviderStateMixin {
+  late final int _debugId = EasyRefresh._debugNextId++;
+  final Set<String> _debugOnceKeys = <String>{};
+
+  bool get _debugEnabled => kDebugMode && EasyRefresh.debugLogEnabled;
+
+  void _log(String Function() messageBuilder) {
+    if (!_debugEnabled) {
+      return;
+    }
+    _erDebugLog('[EasyRefresh#$_debugId] ${messageBuilder()}');
+  }
+
+  void _logOnce(String key, String Function() messageBuilder) {
+    if (!_debugEnabled) {
+      return;
+    }
+    if (_debugOnceKeys.add(key)) {
+      _log(messageBuilder);
+    }
+  }
+
   /// [ScrollPhysics] use it in EasyRefresh.
   late _ERScrollPhysics _physics;
 
@@ -344,6 +375,13 @@ class _EasyRefreshState extends State<EasyRefresh>
   @override
   void initState() {
     super.initState();
+    _logOnce(
+      'init',
+      () =>
+          'initState refresh=${widget.onRefresh != null} load=${widget.onLoad != null} '
+          'triggerAxis=${widget.triggerAxis} isNested=${widget.isNested} '
+          'refreshOnStart=${widget.refreshOnStart}',
+    );
     // Refresh on start.
     if (widget.refreshOnStart && widget.onRefresh != null) {
       _isRefreshOnStart = true;
@@ -363,6 +401,13 @@ class _EasyRefreshState extends State<EasyRefresh>
   @override
   void didUpdateWidget(covariant EasyRefresh oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _logOnce(
+      'didUpdateWidget',
+      () =>
+          'didUpdateWidget refresh=${widget.onRefresh != null} load=${widget.onLoad != null} '
+          'triggerAxis=${widget.triggerAxis} isNested=${widget.isNested} '
+          'simultaneously=${widget.simultaneously}',
+    );
     // Update header and footer.
     _headerNotifier._update(
       indicator: _header,
@@ -404,6 +449,7 @@ class _EasyRefreshState extends State<EasyRefresh>
         header: _header,
         userOffsetNotifier: userOffsetNotifier,
         vsync: this,
+        debugLabel: 'EasyRefresh#$_debugId/header',
         onRefresh: _onRefresh,
         canProcessAfterNoMore: widget.canRefreshAfterNoMore,
         isNested: widget.isNested,
@@ -421,6 +467,7 @@ class _EasyRefreshState extends State<EasyRefresh>
         footer: _footer,
         userOffsetNotifier: userOffsetNotifier,
         vsync: this,
+        debugLabel: 'EasyRefresh#$_debugId/footer',
         onLoad: widget.onLoad,
         canProcessAfterNoMore: widget.canLoadAfterNoMore,
         isNested: widget.isNested,
@@ -441,6 +488,13 @@ class _EasyRefreshState extends State<EasyRefresh>
       footerNotifier: _footerNotifier,
       spring: widget.spring,
       frictionFactor: widget.frictionFactor,
+    );
+    _logOnce(
+      'data_init',
+      () =>
+          'data init headerPos=${_headerNotifier.iPosition} footerPos=${_footerNotifier.iPosition} '
+          'headerClamping=${_headerNotifier.clamping} footerClamping=${_footerNotifier.clamping} '
+          'headerTriggerOffset=${_headerNotifier.triggerOffset} footerTriggerOffset=${_footerNotifier.triggerOffset}',
     );
   }
 
@@ -532,6 +586,11 @@ class _EasyRefreshState extends State<EasyRefresh>
         // Physics is not initialized.
         if (_headerNotifier.axis == null ||
             _headerNotifier.axisDirection == null) {
+          _logOnce(
+            'header_axis_null',
+            () => 'header build skipped: axis/axisDirection not set yet '
+                '(mode=${_headerNotifier.mode} offset=${_headerNotifier.offset})',
+          );
           return const SizedBox();
         }
         // Axis and direction.
@@ -581,13 +640,18 @@ class _EasyRefreshState extends State<EasyRefresh>
       valueListenable: _footerNotifier.listenable(),
       builder: (ctx, notifier, _) {
         // Physics is not initialized.
-        if (_headerNotifier.axis == null ||
-            _headerNotifier.axisDirection == null) {
+        if (_footerNotifier.axis == null ||
+            _footerNotifier.axisDirection == null) {
+          _logOnce(
+            'footer_axis_null',
+            () => 'footer build skipped: axis/axisDirection not set yet '
+                '(mode=${_footerNotifier.mode} offset=${_footerNotifier.offset})',
+          );
           return const SizedBox();
         }
         // Axis and direction.
-        final axis = _headerNotifier.axis!;
-        final axisDirection = _headerNotifier.axisDirection!;
+        final axis = _footerNotifier.axis!;
+        final axisDirection = _footerNotifier.axisDirection!;
         // Set safe area offset.
         final safePadding = MediaQuery.of(context).padding;
         _footerNotifier._safeOffset = axis == Axis.vertical

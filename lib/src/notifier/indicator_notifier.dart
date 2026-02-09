@@ -13,6 +13,32 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// Refresh and loading Indicator.
   Indicator _indicator;
 
+  final String? _debugLabel;
+  final Set<String> _debugOnceKeys = <String>{};
+
+  bool get _debugEnabled => kDebugMode && EasyRefresh.debugLogEnabled;
+
+  void _log(String Function() messageBuilder) {
+    if (!_debugEnabled) {
+      return;
+    }
+    final message = messageBuilder();
+    if (_debugLabel == null) {
+      _erDebugLog('[IndicatorNotifier] $message');
+    } else {
+      _erDebugLog('[$_debugLabel] $message');
+    }
+  }
+
+  void _logOnce(String key, String Function() messageBuilder) {
+    if (!_debugEnabled) {
+      return;
+    }
+    if (_debugOnceKeys.add(key)) {
+      _log(messageBuilder);
+    }
+  }
+
   /// Used to provide [clamping] animation.
   final TickerProviderStateMixin vsync;
 
@@ -45,7 +71,9 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     Axis? triggerAxis,
     bool waitTaskResult = true,
     FutureOr Function()? task,
+    String? debugLabel,
   })  : _indicator = indicator,
+        _debugLabel = debugLabel,
         _onCanProcess = onCanProcess,
         _canProcessAfterNoMore = canProcessAfterNoMore,
         _isNested = isNested,
@@ -56,6 +84,12 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     userOffsetNotifier.addListener(_onUserOffset);
     indicator.listenable?._bind(this);
     _mounted = true;
+    _logOnce(
+      'init',
+      () => 'init clamping=$clamping safeArea=$safeArea position=$iPosition '
+          'triggerOffset=$triggerOffset infiniteOffset=$infiniteOffset '
+          'triggerAxis=$_triggerAxis task=${_task != null}',
+    );
   }
 
   double get triggerOffset => _indicator.triggerOffset;
@@ -193,6 +227,11 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     final oldMode = __mode;
     __mode = mode;
     if (mode != oldMode) {
+      _log(
+        () => 'mode $oldMode -> $mode offset=$_offset result=$_result '
+            'axis=$_axis dir=$_axisDirection supportAxis=$_isSupportAxis '
+            'userOffset=${userOffsetNotifier.value}',
+      );
       for (final listener in _modeChangeListeners) {
         listener(mode, _offset);
       }
@@ -415,6 +454,12 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     _triggerAxis = triggerAxis;
     _task = task;
     _waitTaskResult = waitTaskRefresh ?? _waitTaskResult;
+    _log(
+      () => 'update clamping=$clamping safeArea=$safeArea position=$iPosition '
+          'triggerOffset=$triggerOffset infiniteOffset=$infiniteOffset '
+          'triggerAxis=$_triggerAxis task=${_task != null} waitResult=$_waitTaskResult '
+          'canProcessAfterNoMore=$_canProcessAfterNoMore isNested=$_isNested',
+    );
     if (_indicator.clamping && _clampingAnimationController == null) {
       _initClampingAnimation();
     } else if (!_indicator.clamping && _clampingAnimationController != null) {
@@ -449,10 +494,16 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     bool force = false,
   }) {
     if (!_mounted) {
+      _logOnce('callTask_unmounted', () => 'callTask ignored: not mounted');
       return Future.value();
     }
     if (!force) {
       if (modeLocked || noMoreLocked || secondaryLocked || !_canProcess) {
+        _log(
+          () => 'callTask ignored: '
+              'modeLocked=$modeLocked noMoreLocked=$noMoreLocked secondaryLocked=$secondaryLocked canProcess=$_canProcess '
+              'mode=$_mode result=$_result offset=$_offset',
+        );
         return Future.value();
       }
     } else {
@@ -460,6 +511,11 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       _mode = IndicatorMode.inactive;
       _processing = false;
     }
+    _log(
+      () =>
+          'callTask start overOffset=$overOffset duration=$duration curve=$curve '
+          'scrollController=${scrollController != null} force=$force',
+    );
     return animateToOffset(
       offset: actualTriggerOffset + overOffset,
       mode: IndicatorMode.ready,
@@ -507,6 +563,10 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     if (_axis != position.axis || _axisDirection != position.axisDirection) {
       _axis = position.axis;
       _axisDirection = position.axisDirection;
+      _log(
+        () => 'axis update axis=$_axis dir=$_axisDirection '
+            'isNested=$_isNested isNestedOuter=${position.isNestedOuter} isNestedInner=${position.isNestedInner}',
+      );
       Future(() {
         if (_mounted) {
           notifyListeners();
@@ -559,6 +619,18 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     // Calculate and update the offset.
     _offset = _calculateOffset(position, value);
     _slightDeviation();
+    if (oldOffset == 0 && _offset > 0) {
+      _log(
+        () =>
+            'overscroll start offset=$_offset value=$value pixels=${position.pixels} '
+            'min=${position.minScrollExtent} max=${position.maxScrollExtent} bySimulation=$bySimulation',
+      );
+    } else if (oldOffset > 0 && _offset == 0) {
+      _log(
+        () => 'overscroll end value=$value pixels=${position.pixels} '
+            'min=${position.minScrollExtent} max=${position.maxScrollExtent} bySimulation=$bySimulation',
+      );
+    }
     // Do nothing if not out of bounds.
     if (oldOffset == 0 && _offset == 0) {
       if (_mode == IndicatorMode.done ||
@@ -615,6 +687,11 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   void _updateMode([double? oldOffset]) {
     // When the orientation is different, no modification is made.
     if (!_isSupportAxis) {
+      _logOnce(
+        'updateMode_unsupported_axis',
+        () =>
+            'updateMode skipped: unsupported axis (axis=$_axis triggerAxis=$_triggerAxis)',
+      );
       return;
     }
     // No task, keep IndicatorMode.inactive state.
@@ -622,6 +699,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       if (_mode != IndicatorMode.inactive) {
         _mode = IndicatorMode.inactive;
       }
+      _logOnce('updateMode_no_task', () => 'updateMode: no task');
       return;
     }
     // Not updated during task execution and task completion.
@@ -758,9 +836,16 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// Execute the task and process the result.
   void _onTask() async {
     if (!(_canProcess && !_processing && _task != null)) {
+      _logOnce(
+        'onTask_skip',
+        () =>
+            'onTask skip canProcess=$_canProcess processing=$_processing task=${_task != null}',
+      );
       return;
     }
     _processing = true;
+    _log(() =>
+        'task start waitResult=$_waitTaskResult mode=$_mode offset=$_offset');
     if (_waitTaskResult) {
       try {
         final res = await Future.sync(_task!);
@@ -769,14 +854,17 @@ abstract class IndicatorNotifier extends ChangeNotifier {
         } else {
           _result = IndicatorResult.success;
         }
+        _log(() => 'task complete result=$_result');
       } catch (_) {
         _result = IndicatorResult.fail;
+        _log(() => 'task error result=$_result');
         rethrow;
       } finally {
         _setMode(IndicatorMode.processed);
         _processing = false;
       }
     } else {
+      _log(() => 'task fired (no-wait)');
       Future.sync(_task!);
     }
   }
@@ -928,9 +1016,19 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// Build indicator widget.
   Widget _build(BuildContext context) {
     if (_axis == null || _axisDirection == null) {
+      _logOnce(
+        'build_skip_axis',
+        () =>
+            'build skipped: axis/axisDirection not set (mode=$_mode offset=$_offset)',
+      );
       return const SizedBox();
     }
     if (!_isSupportAxis) {
+      _logOnce(
+        'build_skip_triggerAxis',
+        () =>
+            'build skipped: unsupported axis (axis=$_axis triggerAxis=$_triggerAxis mode=$_mode offset=$_offset)',
+      );
       return const SizedBox();
     }
     return _indicator.build(
@@ -993,6 +1091,7 @@ class HeaderNotifier extends IndicatorNotifier {
     super.triggerAxis,
     FutureOr Function()? onRefresh,
     bool waitRefreshResult = true,
+    super.debugLabel,
   }) : super(
           indicator: header,
           onCanProcess: onCanRefresh,
@@ -1145,6 +1244,7 @@ class FooterNotifier extends IndicatorNotifier {
     super.triggerAxis,
     FutureOr Function()? onLoad,
     bool waitLoadResult = true,
+    super.debugLabel,
   }) : super(
           indicator: footer,
           onCanProcess: onCanLoad,

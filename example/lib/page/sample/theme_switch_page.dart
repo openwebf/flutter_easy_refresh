@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:easy_refresh/easy_refresh.dart';
+import 'package:webf_easy_refresh/easy_refresh.dart';
 import 'package:example/config/routes.dart';
 import 'package:example/page/more/theme_page.dart';
 import 'package:example/widget/skeleton_item.dart';

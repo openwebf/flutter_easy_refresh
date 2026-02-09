@@ -13,7 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   rive: any
-  easy_refresh:
+  webf_easy_refresh:
     path: ../../
 
 dev_dependencies:

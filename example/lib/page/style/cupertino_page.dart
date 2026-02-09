@@ -1,4 +1,4 @@
-import 'package:easy_refresh/easy_refresh.dart';
+import 'package:webf_easy_refresh/easy_refresh.dart';
 import 'package:example/widget/skeleton_item.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:easy_refresh/easy_refresh.dart';
+import 'package:webf_easy_refresh/easy_refresh.dart';
 
 void main() {
   EasyRefresh.debugLogEnabled = true;

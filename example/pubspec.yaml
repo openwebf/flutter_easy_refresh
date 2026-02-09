@@ -32,7 +32,7 @@ dependencies:
   flutter_svg: ^2.2.0
   flutter_sticky_header: ^0.8.0
   path_drawing: ^1.0.1
-  easy_refresh:
+  webf_easy_refresh:
     path: ../
   easy_refresh_space:
     path: ../styles/easy_refresh_space

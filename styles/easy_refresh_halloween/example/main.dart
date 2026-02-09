@@ -1,6 +1,6 @@
 import 'package:easy_refresh_halloween/easy_refresh_halloween.dart';
 import 'package:flutter/material.dart';
-import 'package:easy_refresh/easy_refresh.dart';
+import 'package:webf_easy_refresh/easy_refresh.dart';
 
 void main() => runApp(const MyApp());
 

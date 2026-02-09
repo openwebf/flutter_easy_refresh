@@ -1,4 +1,4 @@
-import 'package:easy_refresh/easy_paging.dart';
+import 'package:webf_easy_refresh/easy_paging.dart';
 import 'package:example/widget/skeleton_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';

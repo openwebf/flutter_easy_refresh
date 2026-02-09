@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:easy_refresh/easy_refresh.dart';
-import 'package:easy_refresh/easy_paging.dart';
+import 'package:webf_easy_refresh/easy_refresh.dart';
+import 'package:webf_easy_refresh/easy_paging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
